@@ -1,2 +1,2 @@
 # praca-inzynierska
-test
+testpython -m venv env
