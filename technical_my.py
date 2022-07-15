@@ -32,4 +32,13 @@ def sma(win_wide, start_date, end_date):
     sma = ftse100_stocks["Adj Close"].loc[start_date:end_date].rolling(window=win_wide).mean()
     return sma;
 
+print('SMA')
 print(sma(20, '2019-01-01','2019-12-31'))
+
+#Expotential Moving Average 
+def esma(win_wide, start_date, end_date):
+    sma = ftse100_stocks["Adj Close"].loc[start_date:end_date].ewm(win_wide).mean()
+    return sma;
+
+print('ESMA')
+print(esma(20, '2019-01-01','2019-12-31'))
