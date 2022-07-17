@@ -133,5 +133,110 @@ def buy_sell_macd(signal):
 
 azn_adj_3mo = macd('2019-08-01','2019-10-31');   
 a = buy_sell_macd(azn_adj_3mo) 
-print('Buy and sell MACD')
-print(a)
+#print('Buy and sell MACD')
+#print(a)
+
+#RSI 
+
+def rsi(start_date, end_date):
+    azn_adj_12mo = ftse100_stocks[['Adj Close']][start_date:end_date]
+    delta = azn_adj_12mo['Adj Close'].diff(1)
+    delta = delta.dropna()
+    
+    up = delta.copy()
+    down = delta.copy()
+    up[up < 0] = 0
+    down[down > 0] = 0
+    
+    period = 14
+    # Calculate average gain and average loss
+    AVG_Gain = up.rolling(window=period).mean()
+    #AVG_Loss = abs(down.rolling(window=period).mean())
+    AVG_Loss = down.abs().rolling(window=period).mean()
+    # Calculate Relative Strength (RS)
+    RS = AVG_Gain / AVG_Loss
+    # Calculate RSI
+    RSI = 100.0 - (100.0 / (1.0 + RS))
+    
+    
+    # Calculate the EWMA average gain and average loss
+    AVG_Gain2 = up.ewm(span=period).mean()
+    AVG_Loss2 = down.abs().ewm(span=period).mean()
+
+    # Calculate the RSI based on EWMA
+    RS2 = AVG_Gain2 / AVG_Loss2
+    RSI2 = 100.0 - (100.0 / (1.0 + RS2))
+    
+    return (RSI, RSI2)
+    
+(RSI, RSI2)  = rsi('2019-01-01','2019-12-31')
+#print('RSI')
+#print(RSI)
+#print('RSI2')
+#print(RSI2)
+
+#Rate of change
+def roc(start_date, end_date):
+    azn_roc_12mo = ftse100_stocks[start_date:end_date]
+    azn_roc_12mo['ROC'] = ( azn_roc_12mo['Adj Close'] / azn_roc_12mo['Adj Close'].shift(9) -1 ) * 100
+    
+    azn_roc_100d = azn_roc_12mo[-100:]
+    dates = azn_roc_100d.index
+    price = azn_roc_100d['Adj Close']
+    roc = azn_roc_100d['ROC']
+
+    return roc
+
+#print('ROC')
+#print(roc('2019-01-01','2019-12-31'))
+
+#Bollinder Bands
+def bollinder_bands(start_date, end_date):
+    azn_12mo_bb = ftse100_stocks[start_date:end_date]
+    #Get the time period (20 days)
+    period = 20
+    # Calculate the 20 Day Simple Moving Average, Std Deviation, Upper Band and Lower Band
+    #Calculating the Simple Moving Average
+    azn_12mo_bb['SMA'] = azn_12mo_bb['Close'].rolling(window=period).mean()
+    # Get the standard deviation
+    azn_12mo_bb['STD'] = azn_12mo_bb['Close'].rolling(window=period).std()
+    #Calculate the Upper Bollinger Band
+    azn_12mo_bb['Upper'] = azn_12mo_bb['SMA'] + (azn_12mo_bb['STD'] * 2)
+    #Calculate the Lower Bollinger Band
+    azn_12mo_bb['Lower'] = azn_12mo_bb['SMA'] - (azn_12mo_bb['STD'] * 2)
+    #Create a list of columns to keep
+    #column_list = ['Close', 'SMA', 'Upper', 'Lower']
+    return azn_12mo_bb
+
+def buy_sell_bb(data):
+    buy_signal = [] #buy list
+    sell_signal = [] #sell list
+
+    for i in range(len(data['Close'])):
+      if data['Close'][i] > data['Upper'][i]: #Then you should sell 
+        buy_signal.append(np.nan)
+        sell_signal.append(data['Close'][i])
+      elif data['Close'][i] < data['Lower'][i]: #Then you should buy
+        sell_signal.append(np.nan)
+        buy_signal.append(data['Close'][i])
+      else:
+        buy_signal.append(np.nan)
+        sell_signal.append(np.nan)
+    return (buy_signal, sell_signal)
+
+data_bb = bollinder_bands('2019-01-01','2019-12-31')
+(buy_bb, sell_bb) = buy_sell_bb(data_bb)
+#print(buy_bb)
+#print(sell_bb)
+
+def so(start_date, end_date):
+    azn_so = ftse100_stocks[start_date:end_date]
+    azn_so['L14'] = azn_so['Low'].rolling(window=14).min()
+    azn_so['H14'] = azn_so['High'].rolling(window=14).max()
+
+    azn_so['%K'] = 100*((azn_so['Close'] - azn_so['L14']) / (azn_so['H14'] - azn_so['L14']) )
+    azn_so['%D'] = azn_so['%K'].rolling(window=3).mean()
+
+    azn_so['Sell Entry'] = ((azn_so['%K'] < azn_so['%D']) & (azn_so['%K'].shift(1) > azn_so['%D'].shift(1))) & (azn_so['%D'] > 80)
+    azn_so['Buy Entry'] = ((azn_so['%K'] > azn_so['%D']) & (azn_so['%K'].shift(1) < azn_so['%D'].shift(1))) & (azn_so['%D'] < 20)
+    return (azn_so)
