@@ -2,7 +2,7 @@ from flask import Flask, render_template, url_for, redirect, request, jsonify
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, SelectField
 from random import randint, seed
-#from technical import get_prices
+from technical_my import sma
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'asdfghjk'
@@ -19,9 +19,9 @@ def index():
 #def technical():
 #    '''Classification endpoint'''
 #        
-#    response  = get_prices()
+#    response  = sma(20, '2019-01-01','2019-12-31')
 #    
-#   return response
+#    return response
 
 
 
