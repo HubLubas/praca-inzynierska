@@ -2,7 +2,7 @@ from flask import Flask, render_template, url_for, redirect, request, jsonify
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, SelectField
 from random import randint, seed
-from technical import get_prices
+#from technical import get_prices
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'asdfghjk'
