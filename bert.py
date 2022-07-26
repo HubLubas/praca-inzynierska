@@ -35,6 +35,8 @@ from sklearn.metrics import accuracy_score, matthews_corrcoef
 article_sentiments = pd.read_pickle('azn_prices_labels_news_20210107.pkl')
 model = torch.load('bert_model')
 test_data = pd.read_pickle('test_data')
+test_data = test_data[:6]
+print(test_data)
 #print(test_data.head())
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True) 
 # Create sentence and label lists
@@ -76,7 +78,7 @@ attention_masks = torch.cat(attention_masks, dim=0)
 labels = torch.tensor(labels)
 
 # Set the batch size.  
-batch_size = 16  
+batch_size = 16 
 
 # Create the DataLoader.
 prediction_data = TensorDataset(input_ids, attention_masks, labels)
@@ -112,7 +114,9 @@ for batch in prediction_data_loader:
   
   # Store predictions and true labels
   predictions.append(logits)
+  print(outputs)
   true_labels.append(label_ids)
 
 print('    DONE.')
 print('Positive samples: %d of %d (%.2f%%)' % (test_data.Label.sum(), len(test_data.Label), (test_data.Label.sum() / len(test_data.Label) * 100.0)))
+print(true_labels)
