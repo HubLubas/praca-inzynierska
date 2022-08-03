@@ -1,8 +1,18 @@
+from regex import E
 import yfinance as yf
 import pandas as pd
 from textblob import TextBlob
 import numpy as np
 import re
+import torch
+from torch.utils.data import Dataset, TensorDataset, DataLoader, RandomSampler, SequentialSampler
+from transformers import BertModel, BertTokenizer, BertForSequenceClassification, AdamW, get_linear_schedule_with_warmup
+import nltk
+from nltk import word_tokenize
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+from nltk.corpus import stopwords
 
 def download_finance_data(ticker, start_date, end_date):
     finance_data = yf.download(ticker, start=start_date, end=end_date)
@@ -96,6 +106,88 @@ def getSubjectivity(text):
 def getPolarity(text):
     return TextBlob(text).sentiment.polarity
 
+def bert_data_tokenizer(article_sentiments, tokens):
+    articles = article_sentiments.news_cleaned.values
+    labels = article_sentiments.Label.values
+    tokens = [word_tokenize(article) for article in articles]
+    text = nltk.Text(tokens)
+    stop_words = set(stopwords.words('english'))
+    
+    filtered_articles = [[word for word in article if not word in stop_words if word.isalpha()] for article in tokens]
+    filtered_articles_joined = [','.join(article).replace(',', ' ') for article in filtered_articles]
+    
+    article_sentiments['filtered_articles_joined'] = filtered_articles_joined
+    
+    articles = article_sentiments.filtered_articles_joined.values
+    labels = article_sentiments.Label.values
+    
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+    tokenizer.add_tokens(tokens)
+    max_len = 0
+    
+    for article in article_sentiments.filtered_articles_joined:
+    
+        input_ids = tokenizer.encode(article, add_special_tokens=True)
 
-df = financial_article_cleaner_v2('azn_article_sentiments_20220602.pkl', 'AZN.L', "2017-05-02", "2022-01-05")
-print(df.head())
+        max_len = max(max_len, len(input_ids))
+        
+    token_lens = []
+
+    for txt in article_sentiments.filtered_articles_joined:
+        tokens = tokenizer.encode(txt, max_length=7792)
+        token_lens.append(len(tokens))
+        
+    article_sentiments['filtered_articles_split'] = article_sentiments['filtered_articles_joined'].apply(get_split)
+    keep_columns = ['filtered_articles_split', 'Label']
+    df =  article_sentiments[keep_columns]
+    
+    articles = df.filtered_articles_split.values
+    labels = df.Label.values
+
+    input_ids = []
+    attention_masks = []
+    for article in articles:
+        encoded_dict = tokenizer.encode_plus(
+                            article,                  
+                            add_special_tokens = True, 
+                            max_length = 200,           
+                            return_token_type_ids=False,
+                            pad_to_max_length = True,
+                            return_attention_mask = True,   
+                            return_tensors = 'pt',    
+                    )
+        
+        input_ids.append(encoded_dict['input_ids'])
+
+        attention_masks.append(encoded_dict['attention_mask'])
+
+    input_ids = torch.cat(input_ids, dim=0)
+    attention_masks = torch.cat(attention_masks, dim=0)
+    labels = torch.tensor(labels)
+    
+    batch_size = 16
+
+    data_loader = DataLoader(df, batch_size, sampler=RandomSampler(df), num_workers=4)
+    
+    return data_loader   
+    
+def get_split(text1):
+    l_total = []
+    l_partial = []
+    if len(text1.split())//150 >0:
+        n = len(text1.split())//150
+    else: 
+        n = 1
+    for w in range(n):
+        if w == 0:
+            l_partial = text1.split()[:200]
+            l_total.append(" ".join(l_partial))
+        else:
+            l_partial = text1.split()[w*150:w*150 + 200]
+            l_total.append(" ".join(l_partial))
+    return l_total  
+
+data = pd.read_pickle('azn_prices_labels_news_20210107.pkl')  
+end = bert_data_tokenizer(data, ['astrazeneca', 'pfizer'])
+
+print('###################');
