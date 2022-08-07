@@ -79,7 +79,7 @@ def financial_article_cleaner_v2(file_name, ticker, start_date, end_date):
         clean_news[i] = re.sub(r'[^\w\d\s\']+', '', clean_news[i]) 
 
     merge['news_cleaned'] = clean_news
-    merge['news_cleaned'][0]
+    #merge['news_cleaned'][0]
     merge['subjectivity'] = merge['news_cleaned'].apply(getSubjectivity)
     merge['polarity'] = merge['news_cleaned'].apply(getPolarity)
 
