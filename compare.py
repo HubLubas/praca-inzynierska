@@ -10,22 +10,6 @@ def data_handler(date, period):
     new_date = (date + timedelta(days=period)).strftime('%Y-%m-%d')
     return new_date
 
-def get_trading_date(date, period):
-    is_trading_day = 0
-    i = 1
-    
-    while(is_trading_day == 0):
-        new_date = data_handler(date, period + i)
-        #print(i)
-        value = yf.download('AZN.L', start=new_date, end=new_date)['Close']
-        #print(len(value))
-        if(len(value) == 0):
-            i = i + 1
-        else: 
-            is_trading_day = 1
-
-    return new_date
-
 def predict_profits(filename_vader, filename_bert, decision_date):
     date_desicion = datetime.strptime(decision_date, '%Y-%m-%d').date()
     
@@ -77,11 +61,24 @@ def predict_profits(filename_vader, filename_bert, decision_date):
     
     model = torch.load('bert_model')
     bert_data = pd.read_pickle(filename_bert)
-    vader_prediction = vp.predict_vader(filename_vader,'model.pkl')
+    vader_data = pd.read_pickle(filename_vader)
+    
+    bert_data = bert_data.loc[[decision_date]]
+    vader_data = vader_data.loc[[decision_date]]
+    
+    vader_prediction = vp.predict_vader_v2(vader_data,'model.pkl')
     bert_prediction = bp.bert_prediction(bert_data, model, ['astrazeneca', 'pfizer'])
 
     return  (short_profit, medium_profit, long_profit, vader_prediction, bert_prediction)
+(short_profit, medium_profit, long_profit, vader_prediction, bert_prediction) = predict_profits('vader_data5.pkl', 'bert_data_v3.pkl', '2018-05-16')
+#print('#######################')
+#print(bert_prediction)
+#print('#######################')
 
-#print(predict_profits('vader_data_v3.pkl', 'bert_data_v3.pkl', '2018-05-16'))
-#print(yf.download('AZN.L', start='2018-05-16', end=datetime.today().strftime('%Y-%m-%d')))
-#print(yf.download('AZN.L', start='2022-08-05', end='2022-08-06')['Close'])
+#dv = pd.read_pickle('vader_data6.pkl')
+#db = pd.read_pickle('bert_data_v3.pkl')
+#dv = db.loc['2017-05-12':'2022-05-26']
+#dv.to_pickle('vader_data6.pkl')
+#print(dv)
+#print(db)
+
